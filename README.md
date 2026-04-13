@@ -35,10 +35,8 @@ async function runPrompt(prompt: string) {
       return llmPrompt;
     }
 
-    const { response } = await aiPrompt(
-        llmPrompt.prompt, llmPrompt.type === SIMPLIFICATION_TYPE ? undefined 
-        : agent.assembleResponseFormat()
-    );
+    /** the text content from the response */
+    const response = await aiPrompt(llmPrompt.prompt, llmPrompt.responseFormat);
     llmResponse = response;
   } while (true);
 }
