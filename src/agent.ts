@@ -79,12 +79,12 @@ export type Conversation = {
 
 export type FunctionInvocationRequest<Auto extends object = Record<string, (...args: any) => any>> = {
   [K in keyof Auto]: Auto[K] extends (...args: any) => any
-    ? {
-        function: K;
-        intention: string;
-        arguments: Parameters<Auto[K]>;
-      }
-    : never;
+  ? {
+    function: K;
+    intention: string;
+    arguments: Parameters<Auto[K]>;
+  }
+  : never;
 }[keyof Auto];
 
 export const ACTION_TYPE = "action";
@@ -196,10 +196,39 @@ export class BaseAgent {
     return simplificationContent;
   }
 
+  assembleSimplificationResponseFormat() {
+    return {
+      type: "json_schema",
+      json_schema: {
+        name: "FunctionInvocationRequest",
+        strict: true,
+        schema: {
+          type: "object",
+          properties: {
+            function: {
+              type: "string",
+            },
+            intention: {
+              type: "string",
+            },
+            arguments: {
+              type: "array",
+              items: {
+                anyOf: [
+                  { type: "string" },
+                ],
+              },
+            },
+          },
+        },
+      }
+    }
+  }
+
   async *prompt(
     instruction: string,
   ): AsyncGenerator<
-    { prompt: Conversation[]; type: PromptType },
+    { prompt: Conversation[]; type: PromptType; responseFormat: any },
     { type: "done"; response: string; functionCallHistory: FunctionInvocationRequest[] },
     string
   > {
@@ -220,7 +249,7 @@ export class BaseAgent {
 
     const proto = Object.getPrototypeOf(this);
     while (true) {
-      const nexted = yield { prompt: systemPrompts, type: ACTION_TYPE };
+      const nexted = yield { prompt: systemPrompts, type: ACTION_TYPE, responseFormat: this.assembleResponseFormat() };
 
       if (!nexted) {
         throw new Error("Response is required. Call .next(response) with the response from the model.");
@@ -261,7 +290,11 @@ export class BaseAgent {
         ...systemPrompts.slice(1),
       ];
 
-      const nextedSimplified = yield { prompt: simplificationPrompts, type: SIMPLIFICATION_TYPE };
+      const nextedSimplified = yield {
+        prompt: simplificationPrompts,
+        type: SIMPLIFICATION_TYPE,
+        responseFormat: this.assembleSimplificationResponseFormat()
+      };
       if (!nextedSimplified) {
         throw new Error("Response is required. Call .next(response) with the response from the model.");
       }
