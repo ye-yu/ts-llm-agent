@@ -9,7 +9,7 @@ Visit the [wiki](https://github.com/ye-yu/ts-llm-agent/wiki/TypeScript-LLM-Agent
 Define your agent and tools using decorators:
 
 ```typescript
-import { Agent, Tool, JsonSchemaType } from "ts-agent-tool";
+import { Agent, Tool, JsonSchemaType } from "ts-llm-agent";
 
 @Agent()
 class MyAgent {
