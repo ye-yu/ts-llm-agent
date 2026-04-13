@@ -19,8 +19,6 @@ type ToolFunction = {
   fn: Function;
 }
 
-const enc = get_encoding("o200k_base");
-
 export const TiktokenEncoding: (
   encoding: "cl100k_base" | "gpt2" | "o200k_base" | "p50k_base" | "p50k_edit" | "r50k_base",
 ) => ClassDecorator = (encoding) => (target) => {
@@ -232,6 +230,9 @@ export class BaseAgent {
     { type: "done"; response: string; functionCallHistory: FunctionInvocationRequest[] },
     string
   > {
+    const proto = Object.getPrototypeOf(this);
+    const tokenEncoding = getMetadata(AGENT_TIKTOKEN_ENCODING, proto) ?? "o200k_base";
+    const enc = get_encoding(tokenEncoding);
     const prompt = this.assembleSystemPrompts();
     const initialPrompts: Conversation[] = [
       {
@@ -247,7 +248,6 @@ export class BaseAgent {
     let systemPrompts: Conversation[] = [...initialPrompts];
     const agentFunctionHistory: FunctionInvocationRequest[] = [];
 
-    const proto = Object.getPrototypeOf(this);
     while (true) {
       const nexted = yield { prompt: systemPrompts, type: ACTION_TYPE, responseFormat: this.assembleResponseFormat() };
 
