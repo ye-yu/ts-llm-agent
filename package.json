@@ -1,6 +1,6 @@
 {
   "name": "ts-llm-agent",
-  "version": "1.0.1-types",
+  "version": "1.0.1",
   "description": "Allows LLM to execute functions as part of the prompt tools",
   "keywords": [
     "llm",
