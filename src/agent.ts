@@ -218,6 +218,8 @@ export class BaseAgent {
               },
             },
           },
+          required: ["function", "arguments", "intention"],
+          additionalProperties: false,
         },
       }
     }
