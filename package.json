@@ -1,0 +1,42 @@
+{
+  "name": "ts-llm-agent",
+  "version": "1.0.0",
+  "description": "Allows LLM to execute functions as part of the prompt tools",
+  "keywords": [
+    "llm",
+    "agent"
+  ],
+  "files": ["README.md", "dist"],
+  "homepage": "https://github.com/ye-yu/ts-llm-agent#readme",
+  "bugs": {
+    "url": "https://github.com/ye-yu/ts-llm-agent/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ye-yu/ts-llm-agent.git"
+  },
+  "license": "GPL-3.0-or-later",
+  "author": "ye-yu@github.io",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "npx tsc -p tsconfig.build.json",
+    "prepublish": "npm test && npm run build",
+    "start": "node --import ./lib/loader.ts",
+    "test": "node --import ./lib/loader.ts --test"
+  },
+   "dependencies": {
+    "tiktoken": "^1.0.22"
+  },
+  "devDependencies": {
+    "@swc/core": "^1.15.24",
+    "@types/node": "^22.19.0",
+    "typescript": "^6.0.0"
+  },
+  "optionalDependencies": {
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.4",
+    "class-validator-jsonschema": "^5.1.0",
+    "reflect-metadata": "^0.2.2"
+  }
+}
