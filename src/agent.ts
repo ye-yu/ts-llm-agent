@@ -14,6 +14,11 @@ export const AGENT_SIMPLIFICATION_INSTRUCTION = "agent:simplificationInstruction
 export const AGENT_TYPES = "agent:types";
 export const AGENT_TIKTOKEN_ENCODING = "agent:tiktokenEncoding";
 
+type ToolFunction = {
+  name: string;
+  fn: Function;
+}
+
 const enc = get_encoding("o200k_base");
 
 export const TiktokenEncoding: (
@@ -27,8 +32,13 @@ export const JsonSchemaType: (name: string, jsonSchema: Record<string, any>) => 
     MetadataAppend(AGENT_TYPES, { name, schema })(target);
   };
 
-export const Tool: () => MethodDecorator = () => (target, _, descriptor) => {
-  MetadataAppend(TOOL_FUNCTION, descriptor.value)(target);
+export const Tool: () => MethodDecorator = () => (target, prop, descriptor) => {
+  if (typeof descriptor.value === "function") {
+    MetadataAppend(TOOL_FUNCTION, {
+      name: String(prop),
+      fn: descriptor.value,
+    } satisfies ToolFunction)(target);
+  }
 };
 
 export const ParamName: (name: string, arrayOf?: Function) => ParameterDecorator =
@@ -97,16 +107,16 @@ export class BaseAgent {
   assembleTools() {
     const proto = Object.getPrototypeOf(this);
     const clazz = proto.constructor;
-    const tools: Function[] = getMetadata(TOOL_FUNCTION, proto) ?? [];
-    const staticTools: Function[] = getMetadata(TOOL_FUNCTION, clazz) ?? [];
-    const assembledTools = tools.map((fn) => ({ fn, proto })).concat(staticTools.map((fn) => ({ fn, proto: clazz })));
+    const tools: ToolFunction[] = getMetadata(TOOL_FUNCTION, proto) ?? [];
+    const staticTools: ToolFunction[] = getMetadata(TOOL_FUNCTION, clazz) ?? [];
+    const assembledTools = tools.map(({ name, fn }) => ({ name, fn, proto })).concat(staticTools.map(({ name, fn }) => ({ name, fn, proto: clazz })));
     return assembledTools;
   }
 
   assembleToolDescriptions() {
     const tools = this.assembleTools();
     const toolDescriptions = tools
-      .map(({ fn, proto }) => {
+      .map(({ name, fn, proto }) => {
         const description = getMetadata(TOOL_DESCRIPTION, fn) ?? "No description";
         const paramTypes = getMetadata(DESIGN_PARAMTYPES, proto, fn.name) ?? [];
         const params = paramTypes
@@ -116,7 +126,7 @@ export class BaseAgent {
             return arrayOf ? `${paramName}: ${arrayOf.name}[]` : `${paramName}: ${t.name}`;
           })
           .join(", ");
-        return `- ${fn.name}(${params}): ${description}`;
+        return `- ${name}(${params}): ${description}`;
       })
       .join("\n\n");
 
