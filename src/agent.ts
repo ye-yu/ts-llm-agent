@@ -228,13 +228,15 @@ export class BaseAgent {
   async *prompt(
     instruction: string,
   ): AsyncGenerator<
-    { prompt: Conversation[]; type: PromptType; responseFormat: any },
+    { prompt: Conversation[]; type: PromptType; responseFormat: any, previousFunctionCall: FunctionInvocationRequest },
     { type: "done"; response: string; functionCallHistory: FunctionInvocationRequest[] },
     string
   > {
     const proto = Object.getPrototypeOf(this);
     const tokenEncoding = getMetadata(AGENT_TIKTOKEN_ENCODING, proto) ?? "o200k_base";
     const enc = get_encoding(tokenEncoding);
+    const promptResponseFormat = this.assembleResponseFormat()
+    const simplificationResponseFormat = this.assembleSimplificationResponseFormat()
     const prompt = this.assembleSystemPrompts();
     const initialPrompts: Conversation[] = [
       {
@@ -251,7 +253,16 @@ export class BaseAgent {
     const agentFunctionHistory: FunctionInvocationRequest[] = [];
 
     while (true) {
-      const nexted = yield { prompt: systemPrompts, type: ACTION_TYPE, responseFormat: this.assembleResponseFormat() };
+      const nexted = yield {
+        prompt: systemPrompts,
+        type: ACTION_TYPE,
+        responseFormat: promptResponseFormat,
+        previousFunctionCall: agentFunctionHistory.at(-1) ?? {
+          function: "initialPrompt",
+          intention: "Processing prompt: " + instruction,
+          arguments: [],
+        }
+      };
 
       if (!nexted) {
         throw new Error("Response is required. Call .next(response) with the response from the model.");
@@ -265,12 +276,17 @@ export class BaseAgent {
         };
       }
 
-      const method = Reflect.get(this, parsed.function, proto);
+      const methodFromInstance = Reflect.get(this, parsed.function, proto)
+      const methodFromStatic = Reflect.get(this, parsed.function, proto.construtor);
+
+      const method = methodFromInstance ?? methodFromStatic;
+      const thisArgument = methodFromInstance ? proto : proto.constructor
+
       if (typeof method !== "function") {
         throw new Error(`Function ${parsed.function} not found on agent.`);
       }
 
-      const result = await Reflect.apply(method, this, parsed.arguments);
+      const result = await Reflect.apply(method, thisArgument, parsed.arguments);
       const conversationResult: Conversation = {
         role: "system",
         content: `function ${parsed.function} called with arguments ${JSON.stringify(parsed.arguments)} to ${parsed.intention}, result: ${result ? JSON.stringify(result) : "void"}`,
@@ -295,7 +311,8 @@ export class BaseAgent {
       const nextedSimplified = yield {
         prompt: simplificationPrompts,
         type: SIMPLIFICATION_TYPE,
-        responseFormat: this.assembleSimplificationResponseFormat()
+        responseFormat: simplificationResponseFormat,
+        previousFunctionCall: parsed,
       };
       if (!nextedSimplified) {
         throw new Error("Response is required. Call .next(response) with the response from the model.");
@@ -312,6 +329,8 @@ export class BaseAgent {
       if (typeof simplificationContent !== "string" || !simplificationContent) {
         throw new Error("Invalid simplified history format.", { cause: { simplifiedHistory: simplificationContent } });
       }
+
+      agentFunctionHistory.push(parsedSimplified)
 
       const simplificationPromptsFollowUp: Conversation[] = [
         {
