@@ -102,12 +102,33 @@ export class BaseAgent {
     return { type: "done" as const, response };
   }
 
+  getAllInheritedMetadata(key: string) {
+    let proto = this;
+    let clazz;
+
+    const values: { value: any; proto: any }[] = [];
+
+    do {
+      proto = Object.getPrototypeOf(proto);
+      clazz = proto.constructor;
+      const value = getMetadata(key, proto);
+      if (value !== undefined) {
+        values.push({ value, proto });
+      }
+
+      const clazzValue = getMetadata(key, clazz);
+      if (clazzValue !== undefined) {
+        values.push({ value: clazzValue, proto: clazz });
+      }
+    } while (clazz !== BaseAgent);
+    return values;
+  }
+
   assembleTools() {
-    const proto = Object.getPrototypeOf(this);
-    const clazz = proto.constructor;
-    const tools: ToolFunction[] = getMetadata(TOOL_FUNCTION, proto) ?? [];
-    const staticTools: ToolFunction[] = getMetadata(TOOL_FUNCTION, clazz) ?? [];
-    const assembledTools = tools.map(({ name, fn }) => ({ name, fn, proto })).concat(staticTools.map(({ name, fn }) => ({ name, fn, proto: clazz })));
+    const inheritedTools = this.getAllInheritedMetadata(TOOL_FUNCTION) as Array<{ value: ToolFunction[]; proto: any }>;
+    const assembledTools = inheritedTools.flatMap(({ value, proto }) =>
+      value.map(({ name, fn }) => ({ name, fn, proto })),
+    );
     return assembledTools;
   }
 
