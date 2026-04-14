@@ -276,11 +276,11 @@ export class BaseAgent {
         };
       }
 
-      const methodFromInstance = Reflect.get(this, parsed.function, proto)
+      const methodFromInstance = Reflect.get(this, parsed.function, proto);
       const methodFromStatic = Reflect.get(this, parsed.function, proto.construtor);
 
       const method = methodFromInstance ?? methodFromStatic;
-      const thisArgument = methodFromInstance ? proto : proto.constructor
+      const thisArgument = methodFromInstance ? this : proto;
 
       if (typeof method !== "function") {
         throw new Error(`Function ${parsed.function} not found on agent.`);
