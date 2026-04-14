@@ -6,6 +6,7 @@ import {
   AGENT_DESCRIPTION,
   AGENT_RESPONSE_INSTRUCTION,
   AGENT_SIMPLIFICATION_INSTRUCTION,
+  AGENT_SIMPLIFICATION_THRESHOLD,
   AGENT_TIKTOKEN_ENCODING,
   AGENT_TYPES,
   Agent,
@@ -18,6 +19,7 @@ import {
   ResponseInstruction,
   SIMPLIFICATION_TYPE,
   SimplificationPrompt,
+  SimplificationThreshold,
   TOOL_DESCRIPTION,
   TOOL_FUNCTION,
   TOOL_PARAMNAME,
@@ -35,6 +37,7 @@ class Ingredient {
 @Agent("Inventory helper")
 @CriticalInstruction("Never skip audits")
 @ResponseInstruction("Return structured JSON")
+@SimplificationThreshold(1400)
 @SimplificationPrompt("Custom simplification")
 @JsonSchemaType("Ingredient", {
   type: "object",
@@ -156,6 +159,12 @@ describe("SimplificationPrompt", () => {
     assert.equal(getMetadata(AGENT_SIMPLIFICATION_INSTRUCTION, DemoAgent), "Custom simplification");
   });
 });
+
+describe("SimplificationThreshold", () => {
+  it("stores the simplification threshold token count", () => {
+    assert.equal(getMetadata(AGENT_SIMPLIFICATION_THRESHOLD, DemoAgent), 1400);
+  })
+})
 
 describe("Description", () => {
   it("stores method descriptions", () => {

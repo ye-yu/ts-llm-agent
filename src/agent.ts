@@ -13,6 +13,7 @@ export const AGENT_RESPONSE_INSTRUCTION = "agent:responseInstruction";
 export const AGENT_SIMPLIFICATION_INSTRUCTION = "agent:simplificationInstruction";
 export const AGENT_TYPES = "agent:types";
 export const AGENT_TIKTOKEN_ENCODING = "agent:tiktokenEncoding";
+export const AGENT_SIMPLIFICATION_THRESHOLD = "agent:simplificationThreshold";
 
 type ToolFunction = {
   name: string;
@@ -58,6 +59,10 @@ export const CriticalInstruction: (text: string) => ClassDecorator = (text) => (
 export const ResponseInstruction: (text: string) => ClassDecorator = (text) => (target) => {
   Metadata(AGENT_RESPONSE_INSTRUCTION, text)(target);
 };
+
+export const SimplificationThreshold: (threshold: number) => ClassDecorator = (threshold) => {
+  return Metadata(AGENT_SIMPLIFICATION_THRESHOLD, threshold)
+}
 
 export const SimplificationPrompt: (text: string) => ClassDecorator = (text) => (target) => {
   Metadata(AGENT_SIMPLIFICATION_INSTRUCTION, text)(target);
@@ -257,6 +262,7 @@ export class BaseAgent {
     const promptResponseFormat = this.assembleResponseFormat();
     const simplificationResponseFormat = this.assembleSimplificationResponseFormat();
     const prompt = this.assembleSystemPrompts();
+    const simplifyThreshold = getMetadata(AGENT_SIMPLIFICATION_THRESHOLD, proto) ?? DEFAULT_SIMPLIFICATION_THRESHOLD;
     const initialPrompts: Conversation[] = [
       {
         role: "system",
@@ -315,7 +321,7 @@ export class BaseAgent {
       agentFunctionHistory.push(parsed);
 
       const tikTokens = enc.encode(JSON.stringify(systemPrompts)).length;
-      if (tikTokens < 1500) {
+      if (tikTokens < simplifyThreshold) {
         continue;
       }
 
@@ -425,3 +431,5 @@ RESPONSE INSTRUCTIONS:
 }
 
 `.trim();
+
+export const DEFAULT_SIMPLIFICATION_THRESHOLD = 1500;
