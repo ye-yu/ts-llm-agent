@@ -72,4 +72,3 @@ export class InventoryAgent extends BaseAgent {
     return this.service.inventoryTabulate(start, end);
   }
 }
-    

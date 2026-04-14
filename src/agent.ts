@@ -17,7 +17,7 @@ export const AGENT_TIKTOKEN_ENCODING = "agent:tiktokenEncoding";
 type ToolFunction = {
   name: string;
   fn: Function;
-}
+};
 
 export const TiktokenEncoding: (
   encoding: "cl100k_base" | "gpt2" | "o200k_base" | "p50k_base" | "p50k_edit" | "r50k_base",
@@ -77,12 +77,12 @@ export type Conversation = {
 
 export type FunctionInvocationRequest<Auto extends object = Record<string, (...args: any) => any>> = {
   [K in keyof Auto]: Auto[K] extends (...args: any) => any
-  ? {
-    function: K;
-    intention: string;
-    arguments: Parameters<Auto[K]>;
-  }
-  : never;
+    ? {
+        function: K;
+        intention: string;
+        arguments: Parameters<Auto[K]>;
+      }
+    : never;
 }[keyof Auto];
 
 export const ACTION_TYPE = "action";
@@ -212,31 +212,29 @@ export class BaseAgent {
             arguments: {
               type: "array",
               items: {
-                anyOf: [
-                  { type: "string" },
-                ],
+                anyOf: [{ type: "string" }],
               },
             },
           },
           required: ["function", "arguments", "intention"],
           additionalProperties: false,
         },
-      }
-    }
+      },
+    };
   }
 
   async *prompt(
     instruction: string,
   ): AsyncGenerator<
-    { prompt: Conversation[]; type: PromptType; responseFormat: any, previousFunctionCall: FunctionInvocationRequest },
+    { prompt: Conversation[]; type: PromptType; responseFormat: any; previousFunctionCall: FunctionInvocationRequest },
     { type: "done"; response: string; functionCallHistory: FunctionInvocationRequest[] },
     string
   > {
     const proto = Object.getPrototypeOf(this);
     const tokenEncoding = getMetadata(AGENT_TIKTOKEN_ENCODING, proto) ?? "o200k_base";
     const enc = get_encoding(tokenEncoding);
-    const promptResponseFormat = this.assembleResponseFormat()
-    const simplificationResponseFormat = this.assembleSimplificationResponseFormat()
+    const promptResponseFormat = this.assembleResponseFormat();
+    const simplificationResponseFormat = this.assembleSimplificationResponseFormat();
     const prompt = this.assembleSystemPrompts();
     const initialPrompts: Conversation[] = [
       {
@@ -261,7 +259,7 @@ export class BaseAgent {
           function: "initialPrompt",
           intention: "Processing prompt: " + instruction,
           arguments: [],
-        }
+        },
       };
 
       if (!nexted) {
@@ -330,7 +328,7 @@ export class BaseAgent {
         throw new Error("Invalid simplified history format.", { cause: { simplifiedHistory: simplificationContent } });
       }
 
-      agentFunctionHistory.push(parsedSimplified)
+      agentFunctionHistory.push(parsedSimplified);
 
       const simplificationPromptsFollowUp: Conversation[] = [
         {
