@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  ACTION_TYPE,
   AGENT_CRITICAL_INSTRUCTION,
   AGENT_DESCRIPTION,
   AGENT_RESPONSE_INSTRUCTION,
@@ -17,7 +16,6 @@ import {
   ParamName,
   RequireApproval,
   ResponseInstruction,
-  SIMPLIFICATION_TYPE,
   SimplificationPrompt,
   SimplificationThreshold,
   TOOL_DESCRIPTION,
@@ -29,6 +27,7 @@ import {
   Tool,
 } from "./agent.ts";
 import { getMetadata } from "./metadata-compat/metadata.ts";
+import { ACTION_TYPE, SIMPLIFICATION_TYPE } from "./types.ts";
 
 class Ingredient {
   id: string = "";
@@ -102,7 +101,7 @@ class PromptAgent extends BaseAgent {
 describe("TiktokenEncoding", () => {
   it("stores encoding metadata on the class", () => {
     @TiktokenEncoding("cl100k_base")
-    class CustomEncodingAgent extends BaseAgent {}
+    class CustomEncodingAgent extends BaseAgent { }
 
     assert.equal(getMetadata(AGENT_TIKTOKEN_ENCODING, CustomEncodingAgent), "cl100k_base");
   });
@@ -112,7 +111,7 @@ describe("JsonSchemaType", () => {
   it("appends schema type definitions on the class", () => {
     @JsonSchemaType("One", { type: "object", properties: { id: { type: "string" } } })
     @JsonSchemaType("Two", { type: "object", properties: { value: { type: "number" } } })
-    class TypesAgent extends BaseAgent {}
+    class TypesAgent extends BaseAgent { }
 
     assert.deepEqual(getMetadata(AGENT_TYPES, TypesAgent), [
       { name: "Two", schema: { type: "object", properties: { value: { type: "number" } } } },

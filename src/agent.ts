@@ -1,5 +1,6 @@
 import { get_encoding } from "tiktoken";
 import { getMetadata, Metadata, MetadataAppend } from "./metadata-compat/metadata.ts";
+import { ACTION_TYPE, SIMPLIFICATION_TYPE, type Conversation, type FunctionInvocationRequest, type PromptType } from "./types.ts";
 
 export const TOOL_FUNCTION = "tool:function";
 export const TOOL_DESCRIPTION = "tool:description";
@@ -75,25 +76,6 @@ export const Description: (text: string) => MethodDecorator = (text) => (_, __, 
 const REQUIRE_APPROVAL = Metadata(TOOL_REQUIRE_APPROVAL, true);
 export const RequireApproval: () => MethodDecorator = () => REQUIRE_APPROVAL;
 
-export type Conversation = {
-  role: "system" | "user" | "assistant";
-  content: string;
-};
-
-export type FunctionInvocationRequest<Auto extends object = Record<string, (...args: any) => any>> = {
-  [K in keyof Auto]: Auto[K] extends (...args: any) => any
-    ? {
-        function: K;
-        intention: string;
-        arguments: Parameters<Auto[K]>;
-      }
-    : never;
-}[keyof Auto];
-
-export const ACTION_TYPE = "action";
-export const SIMPLIFICATION_TYPE = "simplification";
-
-export type PromptType = typeof ACTION_TYPE | typeof SIMPLIFICATION_TYPE;
 
 export class BaseAgent {
   @Tool()
@@ -249,9 +231,7 @@ export class BaseAgent {
     };
   }
 
-  async *prompt(
-    instruction: string,
-  ): AsyncGenerator<
+  async *prompt(instruction: string): AsyncGenerator<
     { prompt: Conversation[]; type: PromptType; responseFormat: any; previousFunctionCall: FunctionInvocationRequest },
     { type: "done"; response: string; functionCallHistory: FunctionInvocationRequest[] },
     string

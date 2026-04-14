@@ -7,7 +7,7 @@ import { InventoryService } from "./inventory-integration.service.ts";
 import assert from "node:assert/strict";
 import { MockLLMResponse } from "./inventory-integration.mockllm.ts";
 import { initMockInventoryDatabase } from "./inventory-integration.mockdb.ts";
-import { ACTION_TYPE, SIMPLIFICATION_TYPE } from "../src/agent.ts";
+import { ACTION_TYPE, SIMPLIFICATION_TYPE } from "../src/types.ts";
 
 describe("InventoryAgent", () => {
   let database: Database<typeof inventorySchema>;
