@@ -1,6 +1,7 @@
 import { get_encoding } from "tiktoken";
 import { getMetadata, Metadata, MetadataAppend } from "./metadata-compat/metadata.ts";
 import { ACTION_TYPE, SIMPLIFICATION_TYPE, type Conversation, type FunctionInvocationRequest, type PromptType } from "./types.ts";
+import { AgentPromptGenerator } from "./agent-prompt-generator.ts";
 
 export const TOOL_FUNCTION = "tool:function";
 export const TOOL_DESCRIPTION = "tool:description";
@@ -231,129 +232,25 @@ export class BaseAgent {
     };
   }
 
-  async *prompt(instruction: string): AsyncGenerator<
+  startNewSession(): AsyncGenerator<
     { prompt: Conversation[]; type: PromptType; responseFormat: any; previousFunctionCall: FunctionInvocationRequest },
     { type: "done"; response: string; functionCallHistory: FunctionInvocationRequest[] },
     string
   > {
-    const proto = Object.getPrototypeOf(this);
+    const proto = Object.getPrototypeOf(this)
     const tokenEncoding = getMetadata(AGENT_TIKTOKEN_ENCODING, proto) ?? "o200k_base";
     const enc = get_encoding(tokenEncoding);
-    const promptResponseFormat = this.assembleResponseFormat();
-    const simplificationResponseFormat = this.assembleSimplificationResponseFormat();
-    const prompt = this.assembleSystemPrompts();
-    const simplifyThreshold = getMetadata(AGENT_SIMPLIFICATION_THRESHOLD, proto) ?? DEFAULT_SIMPLIFICATION_THRESHOLD;
-    const initialPrompts: Conversation[] = [
-      {
-        role: "system",
-        content: prompt,
-      },
-      {
-        role: "user",
-        content: instruction,
-      },
-    ];
 
-    let systemPrompts: Conversation[] = [...initialPrompts];
-    const agentFunctionHistory: FunctionInvocationRequest[] = [];
+    return new AgentPromptGenerator({
+      systemPrompt: this.assembleSystemPrompts(),
+      responseFormat: this.assembleResponseFormat(),
+      agent: this,
+      simplifyThreshold: getMetadata(AGENT_SIMPLIFICATION_THRESHOLD, proto) ?? DEFAULT_SIMPLIFICATION_THRESHOLD,
+      simplificationPrompt: this.assembleSimplificationPrompt(),
+      simplificationResponseFormat: this.assembleSimplificationResponseFormat(),
+      enc,
+    })
 
-    while (true) {
-      const nexted = yield {
-        prompt: systemPrompts,
-        type: ACTION_TYPE,
-        responseFormat: promptResponseFormat,
-        previousFunctionCall: agentFunctionHistory.at(-1) ?? {
-          function: "initialPrompt",
-          intention: "Processing prompt: " + instruction,
-          arguments: [],
-        },
-      };
-
-      if (!nexted) {
-        throw new Error("Response is required. Call .next(response) with the response from the model.");
-      }
-
-      const parsed: FunctionInvocationRequest = JSON.parse(nexted);
-      if (parsed.function === "complete") {
-        return {
-          ...this.complete(parsed.arguments[0]),
-          functionCallHistory: agentFunctionHistory,
-        };
-      }
-
-      const methodFromInstance = Reflect.get(this, parsed.function, proto);
-      const methodFromStatic = Reflect.get(this, parsed.function, proto.construtor);
-
-      const method = methodFromInstance ?? methodFromStatic;
-      const thisArgument = methodFromInstance ? this : proto;
-
-      if (typeof method !== "function") {
-        throw new Error(`Function ${parsed.function} not found on agent.`);
-      }
-
-      const result = await Reflect.apply(method, thisArgument, parsed.arguments);
-      const conversationResult: Conversation = {
-        role: "system",
-        content: `function ${parsed.function} called with arguments ${JSON.stringify(parsed.arguments)} to ${parsed.intention}, result: ${result ? JSON.stringify(result) : "void"}`,
-      };
-
-      systemPrompts.push(conversationResult);
-      agentFunctionHistory.push(parsed);
-
-      const tikTokens = enc.encode(JSON.stringify(systemPrompts)).length;
-      if (tikTokens < simplifyThreshold) {
-        continue;
-      }
-
-      const simplificationPrompts: Conversation[] = [
-        {
-          role: "system",
-          content: SIMPLIFICATION_PROMPT,
-        },
-        ...systemPrompts.slice(1),
-      ];
-
-      const nextedSimplified = yield {
-        prompt: simplificationPrompts,
-        type: SIMPLIFICATION_TYPE,
-        responseFormat: simplificationResponseFormat,
-        previousFunctionCall: parsed,
-      };
-      if (!nextedSimplified) {
-        throw new Error("Response is required. Call .next(response) with the response from the model.");
-      }
-
-      const parsedSimplified: FunctionInvocationRequest = JSON.parse(nextedSimplified);
-      if (parsedSimplified.function !== "continue") {
-        throw new Error(
-          `Function ${parsedSimplified.function} not found on agent. Expected "continue" for simplification response.`,
-        );
-      }
-
-      const [simplificationContent] = Array.isArray(parsedSimplified.arguments) ? parsedSimplified.arguments[0] : [];
-      if (typeof simplificationContent !== "string" || !simplificationContent) {
-        throw new Error("Invalid simplified history format.", { cause: { simplifiedHistory: simplificationContent } });
-      }
-
-      agentFunctionHistory.push(parsedSimplified);
-
-      const simplificationPromptsFollowUp: Conversation[] = [
-        {
-          role: "system",
-          content: simplificationContent,
-        },
-        {
-          role: "system",
-          content:
-            `Below is the simplified version from the previous conversation history: ` +
-            `\n${simplificationContent}\n` +
-            `End simplification. Continue user requested action. ` +
-            `Call history: \n ${agentFunctionHistory.join("\n")}`,
-        },
-      ];
-
-      systemPrompts = [...initialPrompts, ...simplificationPromptsFollowUp];
-    }
   }
 }
 

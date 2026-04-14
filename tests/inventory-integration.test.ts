@@ -25,8 +25,8 @@ describe("InventoryAgent", () => {
   it("should end if complete is called", async () => {
     const llm = new MockLLMResponse<InventoryAgent>();
     llm.push({ function: "complete", intention: "finish", arguments: ["I am done"] });
-    const generator = agent.prompt("Test prompt");
-    const firstPrompt = await generator.next();
+    const generator = agent.startNewSession();
+    const firstPrompt = await generator.next("Test prompt");
     assert.ok(firstPrompt.value);
     assert.deepEqual(firstPrompt.value.type, ACTION_TYPE);
     assert.ok(firstPrompt.value.prompt.length);
@@ -56,8 +56,8 @@ describe("InventoryAgent", () => {
     });
     llm.push({ function: "complete", intention: "finish", arguments: ["I am done"] });
 
-    const generator = agent.prompt("Test prompt");
-    const firstPrompt = await generator.next();
+    const generator = agent.startNewSession();
+    const firstPrompt = await generator.next("Test prompt");
     assert.ok(firstPrompt.value);
     assert.deepEqual(firstPrompt.value.type, ACTION_TYPE);
     assert.ok(firstPrompt.value.prompt.length);
@@ -91,8 +91,8 @@ describe("InventoryAgent", () => {
     llm.push({ function: "continue", intention: "continue simplification", arguments: ["Simplification here"] });
     llm.push({ function: "complete", intention: "finish", arguments: ["I am done"] });
 
-    const generator = agent.prompt("Test prompt");
-    const firstPrompt = await generator.next();
+    const generator = agent.startNewSession();
+    const firstPrompt = await generator.next("Test prompt");
     assert.ok(firstPrompt.value);
     assert.deepEqual(firstPrompt.value.type, ACTION_TYPE);
     assert.ok(firstPrompt.value.prompt.length);

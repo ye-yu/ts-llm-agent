@@ -250,9 +250,9 @@ describe("BaseAgent", () => {
 
   it("prompt yields action and completes with function history", async () => {
     const agent = new PromptAgent();
-    const iterator = agent.prompt("echo a value");
+    const iterator = agent.startNewSession();
 
-    const first = await iterator.next();
+    const first = await iterator.next("echo a value");
     assert.equal(first.done, false);
     assert.equal(first.value.type, ACTION_TYPE);
     assert.equal(first.value.previousFunctionCall.function, "initialPrompt");
@@ -292,9 +292,9 @@ describe("BaseAgent", () => {
 
   it("prompt throws when called without a response payload", async () => {
     const agent = new PromptAgent();
-    const iterator = agent.prompt("echo a value");
+    const iterator = agent.startNewSession();
 
-    await iterator.next();
+    await iterator.next("echo a value");
 
     await assert.rejects(async () => {
       await iterator.next(undefined as any);
@@ -303,9 +303,9 @@ describe("BaseAgent", () => {
 
   it("prompt throws when requested function does not exist", async () => {
     const agent = new PromptAgent();
-    const iterator = agent.prompt("do unknown call");
+    const iterator = agent.startNewSession();
 
-    await iterator.next();
+    await iterator.next("do unknown call");
 
     await assert.rejects(async () => {
       await iterator.next(
@@ -320,9 +320,9 @@ describe("BaseAgent", () => {
 
   it("prompt enters simplification mode when token budget is exceeded", async () => {
     const agent = new PromptAgent();
-    const iterator = agent.prompt("generate large payload");
+    const iterator = agent.startNewSession();
 
-    await iterator.next();
+    await iterator.next("generate large payload");
 
     const simplificationStep = await iterator.next(
       JSON.stringify({
@@ -351,9 +351,9 @@ describe("BaseAgent", () => {
 
   it("prompt throws if simplification response function is not continue", async () => {
     const agent = new PromptAgent();
-    const iterator = agent.prompt("generate large payload");
+    const iterator = agent.startNewSession();
 
-    await iterator.next();
+    await iterator.next("generate large payload");
     await iterator.next(
       JSON.stringify({
         function: "huge",
@@ -375,9 +375,9 @@ describe("BaseAgent", () => {
 
   it("prompt throws for invalid simplified history payload", async () => {
     const agent = new PromptAgent();
-    const iterator = agent.prompt("generate large payload");
+    const iterator = agent.startNewSession();
 
-    await iterator.next();
+    await iterator.next("generate large payload");
     await iterator.next(
       JSON.stringify({
         function: "huge",
