@@ -27,8 +27,10 @@ Iterate over your agent's prompts:
 
 const agent = new MyAgent();
 async function runPrompt(prompt: string) {
-  const promptGenerator = agent.prompt(prompt);
-  let llmResponse: string = "";
+  await using promptGenerator = agent.startNewSession();
+  // seed your generator with your prompt first
+  // in the next iteration, update this variable to the llm responses
+  let llmResponse: string = prompt;
   do {
     const { value: llmPrompt } = await promptGenerator.next(llmResponse);
     if (llmPrompt.type === "done") {
@@ -36,7 +38,11 @@ async function runPrompt(prompt: string) {
     }
 
     /** the text content from the response */
-    const response = await aiPrompt(llmPrompt.prompt, llmPrompt.responseFormat);
+    const response = await getLLMResponseContent(
+      llmPrompt.prompt,
+      llmPrompt.responseFormat,
+    );
+
     llmResponse = response;
   } while (true);
 }
