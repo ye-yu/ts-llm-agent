@@ -1,5 +1,7 @@
 import * as module from "node:module";
+import { getLogger } from "../debug/debug.ts";
 
+const console = getLogger("llm-agent:metadata")
 let hasReflectMetadata = false;
 try {
   const require = module.createRequire(import.meta.url);

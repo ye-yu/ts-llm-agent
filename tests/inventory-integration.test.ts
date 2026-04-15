@@ -56,7 +56,7 @@ describe("InventoryAgent", () => {
     });
     llm.push({ function: "complete", intention: "finish", arguments: ["I am done"] });
 
-    const generator = agent.startNewSession();
+    await using generator = agent.startNewSession();
     const firstPrompt = await generator.next("Test prompt");
     assert.ok(firstPrompt.value);
     assert.deepEqual(firstPrompt.value.type, ACTION_TYPE);

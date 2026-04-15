@@ -1,10 +1,19 @@
-import { describe, it } from "node:test";
+import { afterEach, beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { Metadata, MetadataAppend, getMetadata, dumpMetadata } from "./metadata.ts";
+import { reinstallLoggers } from "../debug/debug.ts";
 
 describe("Metadata", () => {
+  beforeEach(() => {
+    reinstallLoggers("llm-agent:metadata:*")
+  })
+
+  afterEach(() => {
+    reinstallLoggers()
+  })
+
   it("should set metadata on a class/target", () => {
-    class TestClass {}
+    class TestClass { }
     const decorator = Metadata("version", "1.0");
     decorator(TestClass);
 
@@ -25,7 +34,7 @@ describe("Metadata", () => {
 
   it("should set metadata on a method descriptor", () => {
     class TestClass {
-      method() {}
+      method() { }
     }
     const descriptor = Object.getOwnPropertyDescriptor(TestClass.prototype, "method");
     const decorator = Metadata("http", "GET");
@@ -37,7 +46,7 @@ describe("Metadata", () => {
 
   it("should set metadata on a parameter", () => {
     class TestClass {
-      method(param: string) {}
+      method(param: string) { }
     }
     const decorator = Metadata("paramType", "string");
     decorator(TestClass, "method", 0);
@@ -47,7 +56,7 @@ describe("Metadata", () => {
   });
 
   it("should support various value types", () => {
-    class TestClass {}
+    class TestClass { }
 
     Metadata("string", "text")(TestClass);
     Metadata("number", 42)(TestClass);
@@ -66,7 +75,7 @@ describe("Metadata", () => {
   });
 
   it("should overwrite existing metadata", () => {
-    class TestClass {}
+    class TestClass { }
 
     Metadata("version", "1.0")(TestClass);
     assert.equal(dumpMetadata(TestClass)?.version, "1.0");
@@ -76,7 +85,7 @@ describe("Metadata", () => {
   });
 
   it("should support multiple metadata keys on same target", () => {
-    class TestClass {}
+    class TestClass { }
 
     Metadata("version", "1.0")(TestClass);
     Metadata("author", "John")(TestClass);
@@ -104,7 +113,7 @@ describe("Metadata", () => {
 
   it("should support multiple parameters on same method", () => {
     class TestClass {
-      method(p1: string, p2: number) {}
+      method(p1: string, p2: number) { }
     }
 
     Metadata("type", "string")(TestClass, "method", 0);
@@ -118,7 +127,7 @@ describe("Metadata", () => {
   it("should work with different target types", () => {
     const target1 = {};
     const target2 = { existing: true };
-    const target3 = function () {};
+    const target3 = function () { };
 
     Metadata("key", "value1")(target1);
     Metadata("key", "value2")(target2);
@@ -132,7 +141,7 @@ describe("Metadata", () => {
 
 describe("MetadataAppend", () => {
   it("should create array and append initial value", () => {
-    class TestClass {}
+    class TestClass { }
 
     const decorator = MetadataAppend("items", "item1");
     decorator(TestClass);
@@ -142,7 +151,7 @@ describe("MetadataAppend", () => {
   });
 
   it("should append to existing array metadata", () => {
-    class TestClass {}
+    class TestClass { }
 
     Metadata("items", [])(TestClass);
     MetadataAppend("items", "item1")(TestClass);
@@ -168,7 +177,7 @@ describe("MetadataAppend", () => {
 
   it("should append to parameter array metadata", () => {
     class TestClass {
-      method(param: string) {}
+      method(param: string) { }
     }
 
     Metadata("decorators", [])(TestClass, "method", 0);
@@ -180,7 +189,7 @@ describe("MetadataAppend", () => {
   });
 
   it("should throw when appending to non-array metadata", () => {
-    class TestClass {}
+    class TestClass { }
 
     Metadata("config", { value: "scalar" })(TestClass);
     const decorator = MetadataAppend("config", "item");
@@ -192,7 +201,7 @@ describe("MetadataAppend", () => {
   });
 
   it("should throw when appending to string metadata", () => {
-    class TestClass {}
+    class TestClass { }
 
     Metadata("text", "hello")(TestClass);
     const decorator = MetadataAppend("text", "world");
@@ -204,7 +213,7 @@ describe("MetadataAppend", () => {
   });
 
   it("should support appending various types", () => {
-    class TestClass {}
+    class TestClass { }
 
     Metadata("values", [])(TestClass);
     MetadataAppend("values", "string")(TestClass);
@@ -217,7 +226,7 @@ describe("MetadataAppend", () => {
   });
 
   it("should preserve array order when appending multiple times", () => {
-    class TestClass {}
+    class TestClass { }
 
     Metadata("queue", [])(TestClass);
     for (let i = 1; i <= 5; i++) {
@@ -229,8 +238,8 @@ describe("MetadataAppend", () => {
   });
 
   it("should work independently on different targets", () => {
-    class Target1 {}
-    class Target2 {}
+    class Target1 { }
+    class Target2 { }
 
     Metadata("items", [])(Target1);
     Metadata("items", [])(Target2);
@@ -249,7 +258,7 @@ describe("MetadataAppend", () => {
 
 describe("getMetadata", () => {
   it("should retrieve metadata from target", () => {
-    class TestClass {}
+    class TestClass { }
     Metadata("version", "1.0")(TestClass);
 
     const result = getMetadata("version", TestClass);
@@ -268,7 +277,7 @@ describe("getMetadata", () => {
 
   it("should retrieve metadata from method parameter", () => {
     class TestClass {
-      method(param: string) {}
+      method(param: string) { }
     }
     Metadata("required", true)(TestClass, "method", 0);
 
@@ -277,7 +286,7 @@ describe("getMetadata", () => {
   });
 
   it("should return undefined for non-existent metadata", () => {
-    class TestClass {}
+    class TestClass { }
 
     const result = getMetadata("missing", TestClass);
     assert.equal(result, undefined);
@@ -294,7 +303,7 @@ describe("getMetadata", () => {
 
   it("should return undefined for non-existent parameter metadata", () => {
     class TestClass {
-      method(param: string) {}
+      method(param: string) { }
     }
 
     const result = getMetadata("missing", TestClass, "method", 0);
@@ -302,7 +311,7 @@ describe("getMetadata", () => {
   });
 
   it("should retrieve complex value types", () => {
-    class TestClass {}
+    class TestClass { }
 
     const obj = { key: "value", nested: { deep: true } };
     const arr = [1, 2, { three: 3 }];
@@ -317,7 +326,7 @@ describe("getMetadata", () => {
   });
 
   it("should retrieve correct metadata when multiple keys exist", () => {
-    class TestClass {}
+    class TestClass { }
 
     Metadata("key1", "value1")(TestClass);
     Metadata("key2", "value2")(TestClass);
@@ -342,7 +351,7 @@ describe("getMetadata", () => {
 
   it("should distinguish between different parameter indices", () => {
     class TestClass {
-      method(p1: string, p2: number, p3: boolean) {}
+      method(p1: string, p2: number, p3: boolean) { }
     }
 
     Metadata("type", "string")(TestClass, "method", 0);
@@ -355,8 +364,8 @@ describe("getMetadata", () => {
   });
 
   it("should retrieve metadata from different targets independently", () => {
-    class Target1 {}
-    class Target2 {}
+    class Target1 { }
+    class Target2 { }
 
     Metadata("value", "target1")(Target1);
     Metadata("value", "target2")(Target2);
@@ -366,7 +375,7 @@ describe("getMetadata", () => {
   });
 
   it("should handle symbol property keys", () => {
-    class TestClass {}
+    class TestClass { }
     const sym = Symbol("test");
 
     Metadata("type", "symbol")(TestClass, sym);
@@ -387,7 +396,7 @@ describe("getMetadata", () => {
   });
 
   it("should return array from appended metadata", () => {
-    class TestClass {}
+    class TestClass { }
 
     Metadata("items", [])(TestClass);
     MetadataAppend("items", "a")(TestClass);

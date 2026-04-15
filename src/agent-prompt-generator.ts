@@ -1,6 +1,8 @@
 import type { Tiktoken } from "tiktoken";
 import type { BaseAgent } from "./agent.ts";
 import { ACTION_TYPE, SIMPLIFICATION_TYPE, type Conversation, type FunctionInvocationRequest, type PromptType } from "./types.ts";
+import { getLogger } from "./debug/debug.ts";
+const console = getLogger("llm-agent:generator")
 
 type AgentPromptGeneratorBase = AsyncGenerator<
   { prompt: Conversation[]; type: PromptType; responseFormat: any; previousFunctionCall: FunctionInvocationRequest },
@@ -53,6 +55,7 @@ export class AgentPromptGenerator implements AgentPromptGeneratorBase {
 
   async next(prompt: string): Promise<IteratorResult<{ prompt: Conversation[]; type: PromptType; responseFormat: any; previousFunctionCall: FunctionInvocationRequest; }, { type: "done"; response: string; functionCallHistory: FunctionInvocationRequest[]; }>> {
     if (!this.initialPrompts.length) {
+      console.debug("Sending initial prompts")
       this.initialPrompts = [
         {
           role: "system",
@@ -86,6 +89,7 @@ export class AgentPromptGenerator implements AgentPromptGeneratorBase {
     }
 
     const parsed: FunctionInvocationRequest = JSON.parse(agentResponse);
+    console.log("Received:", parsed.function, parsed.intention)
     if (this.expectContinue) {
       if (parsed.function !== "continue") {
         throw new Error(

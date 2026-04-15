@@ -1,7 +1,8 @@
 import { get_encoding } from "tiktoken";
 import { getMetadata, Metadata, MetadataAppend } from "./metadata-compat/metadata.ts";
-import { ACTION_TYPE, SIMPLIFICATION_TYPE, type Conversation, type FunctionInvocationRequest, type PromptType } from "./types.ts";
 import { AgentPromptGenerator } from "./agent-prompt-generator.ts";
+import { getLogger } from "./debug/debug.ts";
+const console = getLogger("llm-agent:agent")
 
 export const TOOL_FUNCTION = "tool:function";
 export const TOOL_DESCRIPTION = "tool:description";
@@ -114,6 +115,12 @@ export class BaseAgent {
 
   assembleTools() {
     const inheritedTools = this.getAllInheritedMetadata(TOOL_FUNCTION) as Array<{ value: ToolFunction[]; proto: any }>;
+    console.debug("Tools available:")
+    for (const { value } of inheritedTools) {
+      for (const fn of value) {
+        console.debug("  - ", fn.name)
+      }
+    }
     const assembledTools = inheritedTools.flatMap(({ value, proto }) =>
       value.map(({ name, fn }) => ({ name, fn, proto })),
     );
@@ -232,11 +239,7 @@ export class BaseAgent {
     };
   }
 
-  startNewSession(): AsyncGenerator<
-    { prompt: Conversation[]; type: PromptType; responseFormat: any; previousFunctionCall: FunctionInvocationRequest },
-    { type: "done"; response: string; functionCallHistory: FunctionInvocationRequest[] },
-    string
-  > {
+  startNewSession(): AgentPromptGenerator {
     const proto = Object.getPrototypeOf(this)
     const tokenEncoding = getMetadata(AGENT_TIKTOKEN_ENCODING, proto) ?? "o200k_base";
     const enc = get_encoding(tokenEncoding);
