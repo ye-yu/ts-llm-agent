@@ -7,7 +7,7 @@ import { InventoryService } from "./inventory-integration.service.ts";
 import assert from "node:assert/strict";
 import { MockLLMResponse } from "./inventory-integration.mockllm.ts";
 import { initMockInventoryDatabase } from "./inventory-integration.mockdb.ts";
-import { ACTION_TYPE, SIMPLIFICATION_TYPE } from "../src/types.ts";
+import { ACTION_TYPE, SIMPLIFICATION_TYPE, type FunctionInvocationRequest } from "../src/types.ts";
 
 describe("InventoryAgent", () => {
   let database: Database<typeof inventorySchema>;
@@ -115,4 +115,39 @@ describe("InventoryAgent", () => {
     assert.deepEqual(fourthPrompt.value.type, "done");
     assert.deepEqual(fourthPrompt.value.response, "I am done");
   });
+
+  it("should be able to call fine-grained actions", async () => {
+    const llm = new MockLLMResponse<InventoryAgent & { continue: (text: string) => void }>();
+    llm.push({
+      function: "inventoryTabulate",
+      intention: "stock in".repeat(100),
+      arguments: [0, 100],
+    });
+    llm.push({ function: "continue", intention: "continue simplification", arguments: ["Simplification here"] });
+    llm.push({ function: "complete", intention: "finish", arguments: ["I am done"] });
+
+    await using generator = agent.startNewSession()
+
+    let nextPromptSeed = "Test prompt"
+    let lastFunctionExecution: FunctionInvocationRequest | undefined = undefined
+
+    for (let i = 0; i < 5; i++) {
+      const prompt = generator.nextPrompt(nextPromptSeed)
+      const responseFormat = generator.nextResponseFormat()
+      assert.ok(prompt.length);
+      assert.ok(responseFormat);
+
+      const llmResponse = llm.nextText()
+      lastFunctionExecution = generator.parseLLMResponse(llmResponse)
+      const result = await generator.getFunctionInvocationResult(lastFunctionExecution)
+      nextPromptSeed = generator.stringifyResult(lastFunctionExecution, result)
+
+      if (lastFunctionExecution.function === "complete") {
+        break
+      }
+    }
+
+    assert.ok(lastFunctionExecution)
+    assert.deepEqual(lastFunctionExecution.function, "complete")
+  })
 });

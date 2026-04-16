@@ -297,6 +297,11 @@ describe("Agent tests", () => {
             intention: "Echo input",
             arguments: ["hello"],
           },
+          {
+            function: "complete",
+            intention: "Finish",
+            arguments: ["done"],
+          }
         ],
       });
     });
